@@ -13,6 +13,7 @@ from django.views.generic import FormView, TemplateView
 
 from salsa_auth.forms import SignUpForm, LoginForm
 from salsa_auth.models import UserZipCode
+from salsa_auth.salsa import client as salsa_client
 from salsa_auth.tokens import account_activation_token
 
 
@@ -67,7 +68,6 @@ class SignUpForm(BaseTemplateMixin, FormView):
             'uid': urlsafe_base64_encode(force_bytes(user.pk)),
             'token': account_activation_token.make_token(user),
         })
-        to_email = user.email
         send_mail(email_subject, message, 'testing@datamade.us', [user.email])
 
 
@@ -79,14 +79,16 @@ class LoginForm(BaseTemplateMixin, FormView):
         return super().get(*args, **kwargs)
 
     def post(self):
-        #if self.form.is_valid():
-            # check user
-            # if not user
-                # redirect to signup
-            # if user
-                # authenticate
-                # TO-DO: best way to do this???
-        pass
+        form = get_form()
+
+        if form.is_valid():
+            user = salsa_client.get_user(form.cleaned_data['email'])
+
+            if not user:
+                # TO-DO: Add a message
+                return redirect('salsa_auth:signup')
+
+            return redirect('salsa_auth:authenticate')
 
 
 class VerifyEmail(TemplateView):
@@ -100,30 +102,15 @@ class VerifyEmail(TemplateView):
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             user = None
 
-        if user is not None and account_activation_token.check_token(user, token):
-            # add to salsa
+        link_valid = user is not None and account_activation_token.check_token(user, token)
+
+        if link_valid:
+            salsa_client.put_user(user)
             return redirect('salsa_auth:authenticate')
+
         else:
-            # invalid link
+            # TO-DO: Add a message
             return redirect('salsa_auth:signup')
-
-    def add_to_salsa(self, user):
-
-        params = {
-            'zipcode': user.userzipcode.zipcode,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'email': user.email,
-        }
-
-        payload = settings.SALSA_PAYLOAD % params
-
-        signup = requests.post(settings.SALSA_URL,
-                               data=payload,
-                               headers={'content-type':
-                                        'application/json; charset=utf-8'})
-
-        # Capture exceptions (use the logging module)
 
 
 class Authenticate(TemplateView):

@@ -63,3 +63,4 @@ class SalsaAPI(object):
         return supporter
         '''
 
+client = SalsaAPI()
