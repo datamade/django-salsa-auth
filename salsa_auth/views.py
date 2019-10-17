@@ -7,8 +7,8 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes, force_text
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views.generic import FormView, TemplateView
 
 from salsa_auth.forms import SignUpForm, LoginForm
@@ -68,7 +68,7 @@ class SignUpForm(BaseTemplateMixin, FormView):
             'token': account_activation_token.make_token(user),
         })
         to_email = user.email
-        send_mail(email_subject, message, '6ec675b8a9-10e75e@inbox.mailtrap.io', [to_email])
+        send_mail(email_subject, message, 'testing@datamade.us', [user.email])
 
 
 class LoginForm(BaseTemplateMixin, FormView):
@@ -102,10 +102,10 @@ class VerifyEmail(TemplateView):
 
         if user is not None and account_activation_token.check_token(user, token):
             # add to salsa
-            return redirect('authenticate')
+            return redirect('salsa_auth:authenticate')
         else:
             # invalid link
-            return redirect('signup')
+            return redirect('salsa_auth:signup')
 
     def add_to_salsa(self, user):
 
@@ -132,7 +132,7 @@ class Authenticate(TemplateView):
         TO-DO: Can this be done serverside, or do we need to set the cookies
         clientside, i.e., with JavaScript?
         '''
-        pass
+        return redirect('/')
 
 
 class Logout(TemplateView):
