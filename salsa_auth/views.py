@@ -33,6 +33,7 @@ class SignUpForm(BaseTemplateMixin, FormView):
 
     def post(self, *args, **kwargs):
         form = self.get_form()
+
         if form.is_valid():
             user = self._make_user(form.cleaned_data)
 
@@ -78,11 +79,11 @@ class LoginForm(BaseTemplateMixin, FormView):
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)
 
-    def post(self):
-        form = get_form()
+    def post(self, *args, **kwargs):
+        form = self.get_form()
 
         if form.is_valid():
-            user = salsa_client.get_user(form.cleaned_data['email'])
+            user = salsa_client.get_supporter(form.cleaned_data['email'])
 
             if not user:
                 # TO-DO: Add a message
@@ -118,7 +119,12 @@ class Authenticate(TemplateView):
         '''
         TO-DO: Can this be done serverside, or do we need to set the cookies
         clientside, i.e., with JavaScript?
+
+        Current approach: Use cookie-based Django session engine.
+        https://docs.djangoproject.com/en/2.2/topics/http/sessions/#using-cookie-based-sessions
         '''
+        # TO-DO: Make name of cookie configurable
+        self.request.session['data_tools_authorized'] = True
         return redirect('/')
 
 

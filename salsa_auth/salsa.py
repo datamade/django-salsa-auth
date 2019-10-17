@@ -12,10 +12,28 @@ class SalsaAPI(object):
 
     HOSTNAME = 'https://api.salsalabs.org'
 
-    def __init__(self, api_key):
-        self.api_key = api_key
-
     def put_supporter(self, user):
+        if settings.DEBUG:
+            return json.dumps({
+                'payload': {
+                    'count': 1,
+                    'offset': 0,
+                    'total': '1200',
+                    'supporters': [
+                        {
+                            'firstName': '',
+                            'lastName': '',
+                            'postalCode': '',
+                            'contacts': [{
+                                'type': 'EMAIL',
+                                'value': '',
+                                'status':'OPT_IN'
+                            }],
+                        }
+                    ]
+                }
+            })
+
         endpoint = '{}/api/integration/ext/v1/supporters'.format(self.HOSTNAME)
 
         payload = {
@@ -34,7 +52,7 @@ class SalsaAPI(object):
         }
 
         try:
-            response = requests.put(endpoint, data=json.dump({'payload': payload}), headers={'authToken': settings.SALSA_API_TOKEN})
+            response = requests.put(endpoint, data=json.dumps({'payload': payload}), headers={'authToken': settings.SALSA_API_TOKEN})
         except:
             '''
             When the call to add or update completes, the resulting payload will include all of the data that was sent within the call. Each supporter within the call will have a decorated result attribute to indicate the result of the operation.  For adds or updates, these values will  be:
@@ -50,14 +68,31 @@ class SalsaAPI(object):
         return response
 
     def get_supporter(self, email_address):
+        if settings.DEBUG:
+            return json.dumps({
+                'payload': {
+                    'count': 1,
+                    'offset': 0,
+                    'total': '1200',
+                    'supporters': [{
+                        'result': 'FOUND',
+                        'contacts': [{
+                            'type': 'EMAIL',
+                            'value': '',
+                            'status':'OPT_IN'
+                        }],
+                    }]
+                }
+            })
+
         endpoint = '{}/api/integration/ext/v1/supporters/search'.format(self.HOSTNAME)
 
         payload = {
-            'identifiers': [email_address]
+            'identifiers': [email_address],
             'identifierType': 'EMAIL_ADDESSS'
         }
 
-        response = requests.post(endpoint, data=json.dump({'payload': payload}), headers={'authToken': settings.SALSA_API_TOKEN})
+        response = requests.post(endpoint, data=json.dumps({'payload': payload}), headers={'authToken': settings.SALSA_API_TOKEN})
 
         '''
         return supporter
