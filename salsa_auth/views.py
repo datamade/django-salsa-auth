@@ -107,7 +107,7 @@ class VerifyEmail(TemplateView):
         link_valid = user is not None and account_activation_token.check_token(user, token)
 
         if link_valid:
-            salsa_client.put_user(user)
+            salsa_client.put_supporter(user)
             return redirect('salsa_auth:authenticate')
 
         else:
