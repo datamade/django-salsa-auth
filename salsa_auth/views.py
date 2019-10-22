@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
+from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_text
@@ -115,17 +116,16 @@ class VerifyEmail(TemplateView):
 
 
 class Authenticate(TemplateView):
-    def get(self, *args, **kwargs):
-        '''
-        TO-DO: Can this be done serverside, or do we need to set the cookies
-        clientside, i.e., with JavaScript?
+    template_name = 'authenticate.html'
 
-        Current approach: Use cookie-based Django session engine.
-        https://docs.djangoproject.com/en/2.2/topics/http/sessions/#using-cookie-based-sessions
-        '''
-        # TO-DO: Make name of cookie configurable
-        self.request.session['data_tools_authorized'] = True
-        return redirect('/')
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        context.update({
+            'cookie_name': settings.AUTH_COOKIE_NAME,
+            'cookie_domain': settings.AUTH_COOKIE_DOMAIN,
+            'redirect_location': settings.AUTH_REDIRECT_LOCATION,
+        })
+        return context
 
 
 class Logout(TemplateView):

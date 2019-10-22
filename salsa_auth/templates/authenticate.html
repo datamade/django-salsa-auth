@@ -1,0 +1,9 @@
+{% load static %}
+
+<script type="text/javascript" src="{% static 'js/cookies.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/authenticate.js' %}"></script>
+
+<script type="text/javascript">
+    authCookie.setAuthorization('{{ cookie_name }}', '{{ cookie_domain }}');
+    window.location = '{{ redirect_location }}';
+</script>
