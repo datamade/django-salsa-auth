@@ -2,7 +2,6 @@ from django import forms
 
 
 class BootstrapMixin:
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for visible in self.visible_fields():

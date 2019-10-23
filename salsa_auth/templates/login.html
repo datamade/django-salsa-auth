@@ -1,5 +1,3 @@
-{% extends base_template_name %}
-
 {% block title %}
 Sign Up
 {% endblock %}
@@ -7,7 +5,7 @@ Sign Up
 {% block content %}
 <h3>Welcome back!</h3>
 <p>Enter your email below to verify that you've already subscribed to Better Government Association mailing list.</p>
-<form method="POST">
+<form method="POST" action="{% url 'salsa_auth:login' %}">
   {{ form.as_p }}
   {% csrf_token %}
   <div align="center">
