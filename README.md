@@ -3,6 +3,11 @@
 A reusable application to allow users of your Django application to
 "authenticate" against your [Salsa](https://www.salsalabs.com/) user store.
 
+## Pre-requisites
+
+- [jQuery](https://jquery.com/)
+- [Boostrap](https://getbootstrap.com/)
+
 ## Quick start
 
 1. Add `salsa_auth` to your `INSTALLED_APPS`:
@@ -38,11 +43,31 @@ values.
     SALSA_AUTH_API_KEY = ''  # https://help.salsalabs.com/hc/en-us/articles/224470007-Getting-Started#acquiring-a-token
 
     # Name and domain for cookie set for authorized users
-    SALSA_AUTH_COOKIE_NAME = 'salsa-auth'
+    SALSA_AUTH_COOKIE_NAME = ''  # e.g., salsa-auth
     SALSA_AUTH_COOKIE_DOMAIN = ''  # e.g., datamade.us
 
     # Location to which user will be redirected on authorization
     SALSA_AUTH_REDIRECT_LOCATION = '/'
     ```
 
-5. Use the sign up, log in, and log out views, as needed by your application.
+5. Include the authentication modals and required JavaScript in templates that require login.
+
+    ```html
+    {% include 'auth_modals.html' %}
+
+    ...
+
+    <script src="{% static 'js/render_salsa_auth.js' %}"></script>
+
+    {% if messages %}
+    <script type="text/javascript">
+      $('#messageModal').modal()
+    </script>
+    {% endif %}
+    ```
+
+6. Trigger the login or signup modal.
+
+    ```html
+    $('#loginModal').modal()
+    ```
