@@ -155,11 +155,6 @@ class Authenticate(TemplateView):
         })
 
         messages.add_message(self.request,
-                                 messages.INFO,
-                                 'Welcome back, {}!'.format(user['firstName']),
-                                 extra_tags='font-weight-bold')
-
-        messages.add_message(self.request,
                              messages.INFO,
                              "We've logged you in so you can continue using the database.")
 
