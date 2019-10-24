@@ -1,3 +1,4 @@
+import datetime
 from uuid import uuid4
 
 from django.conf import settings
@@ -10,7 +11,7 @@ from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.views.generic import FormView, TemplateView
+from django.views.generic import FormView, RedirectView
 
 from salsa_auth.forms import SignUpForm, LoginForm
 from salsa_auth.models import UserZipCode
@@ -120,7 +121,7 @@ class LoginForm(JSONFormResponseMixin, FormView):
         return self.form_invalid(form)
 
 
-class VerifyEmail(TemplateView):
+class VerifyEmail(RedirectView):
     def get(self, request, uidb64, token):
         '''
         https://simpleisbetterthancomplex.com/tutorial/2016/08/24/how-to-create-one-time-link.html
@@ -142,24 +143,21 @@ class VerifyEmail(TemplateView):
             return redirect('salsa_auth:signup')
 
 
-class Authenticate(TemplateView):
-    template_name = 'authenticate.html'
+class Authenticate(RedirectView):
+    url = settings.SALSA_AUTH_REDIRECT_LOCATION
 
-    def get_context_data(self, *args, **kwargs):
-        context = super().get_context_data(*args, **kwargs)
+    def get(self, *args, **kwargs):
+        response = HttpResponseRedirect(self.url)
 
-        context.update({
-            'cookie_name': settings.SALSA_AUTH_COOKIE_NAME,
-            'cookie_domain': settings.SALSA_AUTH_COOKIE_DOMAIN,
-            'redirect_location': settings.SALSA_AUTH_REDIRECT_LOCATION,
-        })
+        response.set_cookie(
+            settings.SALSA_AUTH_COOKIE_NAME,
+            'true',
+            expires=datetime.datetime.now() + datetime.timedelta(weeks=52),
+            domain=settings.SALSA_AUTH_COOKIE_DOMAIN,
+        )
 
         messages.add_message(self.request,
                              messages.INFO,
                              "We've logged you in so you can continue using the database.")
 
-        return context
-
-
-class Logout(TemplateView):
-    pass
+        return response

@@ -9,5 +9,4 @@ urlpatterns = [
     path('signup/', salsa_views.SignUpForm.as_view(), name='signup'),
     path('verify/<uidb64>/<token>/', salsa_views.VerifyEmail.as_view(), name='verify'),
     path('authenticate', salsa_views.Authenticate.as_view(), name='authenticate'),
-    path('logout/', salsa_views.Logout.as_view(), name='logout'),
 ]
