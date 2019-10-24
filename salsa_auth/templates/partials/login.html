@@ -1,0 +1,14 @@
+<h3>Welcome back!</h3>
+<p>Enter your email below to verify that you've already subscribed to Better Government Association mailing list.</p>
+<form class="form" id="login-form" method="POST" action="{% url 'salsa_auth:login' %}">
+    {% csrf_token %}
+    <input type="hidden" value="{{ request.get_full_path }}" name="next" />
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" class="form-control" id="email" name="email" placeholder="Email" required />
+        <small class="form-errors" id="email-errors"></small>
+    </div>
+    <div class="form-group text-center">
+        <button class="btn" id="submit-login">Submit</button>
+    </div>
+</form>

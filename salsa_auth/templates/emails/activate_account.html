@@ -1,5 +1,5 @@
 {% autoescape off %}
-Hi {{ user.username }},
+Hi {{ user.first_name }},
 Please click on the link to confirm your registration,
 http://{{ domain }}{% url 'salsa_auth:verify' uidb64=uid token=token %}
 {% endautoescape %}

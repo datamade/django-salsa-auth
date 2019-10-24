@@ -1,0 +1,27 @@
+<div class="modal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false" id="loginModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                {% include 'partials/login.html' %}
+                <p align="center">
+                    <small>Need to create an account? <a href="javascript://" class="toggle-login-signup" data-parent_modal="loginModal">Sign up &raquo;</a></small>
+                </p>
+            </div>
+        </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false" id="signupModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                {% include 'partials/signup.html' %}
+                <p align="center">
+                    <small>Already have an account? <a href="javascript://" class="toggle-login-signup" data-parent_modal="signupModal">Log in &raquo;</a></small>
+                </p>
+            </div>
+        </div>
+    </div>
+  </div>
+</div>

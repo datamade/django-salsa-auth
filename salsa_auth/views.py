@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_text
@@ -18,37 +18,45 @@ from salsa_auth.salsa import client as salsa_client
 from salsa_auth.tokens import account_activation_token
 
 
-class BaseTemplateMixin:
-    def get_context_data(self, *args, **kwargs):
-        context = super().get_context_data(*args, **kwargs)
-        context['base_template_name'] = getattr(settings, 'SALSA_AUTH_BASE_TEMPLATE_NAME', 'base.html')
-        return context
+class JSONFormResponseMixin:
+    def form_valid(self, form):
+        context = self.get_context_data(form=form)
+        return self.render_to_response(context)
+
+    def form_invalid(self, form):
+        context = self.get_context_data(form=form)
+        return self.render_to_response(context)
+
+    def render_to_response(self, context, **kwargs):
+        response = {}
+
+        errors = context['form'].errors
+
+        if errors:
+            response['redirect_url'] = None
+            response['errors'] = errors
+        else:
+            response['redirect_url'] = getattr(self, 'redirect_url', self.request.POST.get('next'))
+
+        return JsonResponse(response)
 
 
-class SignUpForm(BaseTemplateMixin, FormView):
+class SignUpForm(JSONFormResponseMixin, FormView):
     form_class = SignUpForm
     template_name = 'signup.html'
 
-    def get(self, *args, **kwargs):
-        return super().get(*args, **kwargs)
+    def form_valid(self, form):
+        user = self._make_user(form.cleaned_data)
 
-    def post(self, *args, **kwargs):
-        form = self.get_form()
+        # TO-DO: Potentially intercept SMTP error for undeliverable mail here
+        self._send_verification_email(user)
 
-        if form.is_valid():
-            user = self._make_user(form.cleaned_data)
+        message =  'Please check your email for a verification code.'
 
-            # TO-DO: Potentially intercept SMTP error for undeliverable mail here
-            self._send_verification_email(user)
+        if message not in [m.message for m in messages.get_messages(self.request)]:
+            messages.add_message(self.request, messages.INFO, message)
 
-            message =  'Please check your email for a verification code.'
-
-            if message not in [m.message for m in messages.get_messages(self.request)]:
-                messages.add_message(self.request, messages.INFO, message)
-
-            return redirect('/')
-
-        return super().post(*args, **kwargs)
+        return super().form_valid(form)
 
     def _make_user(self, form_data):
         zip_code = form_data.pop('zip_code')
@@ -73,12 +81,10 @@ class SignUpForm(BaseTemplateMixin, FormView):
         send_mail(email_subject, message, 'testing@datamade.us', [user.email])
 
 
-class LoginForm(BaseTemplateMixin, FormView):
+class LoginForm(JSONFormResponseMixin, FormView):
     form_class = LoginForm
     template_name = 'login.html'
-
-    def get(self, *args, **kwargs):
-        return super().get(*args, **kwargs)
+    redirect_url = '/salsa/authenticate'
 
     def post(self, *args, **kwargs):
         form = self.get_form()
@@ -87,10 +93,17 @@ class LoginForm(BaseTemplateMixin, FormView):
             user = salsa_client.get_supporter(form.cleaned_data['email'])
 
             if not user:
-                # TO-DO: Add a message
-                return redirect('salsa_auth:signup')
+                error_message = (
+                    '<strong>{email}</strong> is not subscribed to the BGA mailing list. Please '
+                    '<a href="javascript://" class="toggle-login-signup" data-parent_modal="loginModal">sign up</a> '
+                    'to access this tool.'
+                )
+                form.errors['email'] = [error_message.format(email=form.cleaned_data['email'])]
+                return self.form_invalid(form)
 
-            return redirect('salsa_auth:authenticate')
+            return self.form_valid(form)
+
+        return self.form_invalid(form)
 
 
 class VerifyEmail(TemplateView):
