@@ -121,9 +121,9 @@ class Authenticate(TemplateView):
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
         context.update({
-            'cookie_name': settings.AUTH_COOKIE_NAME,
-            'cookie_domain': settings.AUTH_COOKIE_DOMAIN,
-            'redirect_location': settings.AUTH_REDIRECT_LOCATION,
+            'cookie_name': settings.SALSA_AUTH_COOKIE_NAME,
+            'cookie_domain': settings.SALSA_AUTH_COOKIE_DOMAIN,
+            'redirect_location': settings.SALSA_AUTH_REDIRECT_LOCATION,
         })
         return context
 
