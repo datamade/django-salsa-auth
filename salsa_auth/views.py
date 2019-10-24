@@ -147,11 +147,22 @@ class Authenticate(TemplateView):
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
+
         context.update({
             'cookie_name': settings.SALSA_AUTH_COOKIE_NAME,
             'cookie_domain': settings.SALSA_AUTH_COOKIE_DOMAIN,
             'redirect_location': settings.SALSA_AUTH_REDIRECT_LOCATION,
         })
+
+        messages.add_message(self.request,
+                                 messages.INFO,
+                                 'Welcome back, {}!'.format(user['firstName']),
+                                 extra_tags='font-weight-bold')
+
+        messages.add_message(self.request,
+                             messages.INFO,
+                             "We've logged you in so you can continue using the database.")
+
         return context
 
 
