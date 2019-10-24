@@ -17,6 +17,3 @@ class SignUpForm(BootstrapMixin, forms.Form):
 
 class LoginForm(BootstrapMixin, forms.Form):
     email = forms.EmailField(label='Email')
-
-    def check_salsa(self):
-        pass
