@@ -36,7 +36,7 @@ class JSONFormResponseMixin:
             response['redirect_url'] = None
             response['errors'] = errors
         else:
-            response['redirect_url'] = getattr(self, 'redirect_url', self.request.POST.get('next'))
+            response['redirect_url'] = getattr(self, 'redirect_url', None)
 
         return JsonResponse(response)
 
@@ -51,10 +51,14 @@ class SignUpForm(JSONFormResponseMixin, FormView):
         # TO-DO: Potentially intercept SMTP error for undeliverable mail here
         self._send_verification_email(user)
 
-        message =  'Please check your email for a verification code.'
+        messages.add_message(self.request,
+                             messages.INFO,
+                             'Thanks for signing up!',
+                             extra_tags='font-weight-bold')
 
-        if message not in [m.message for m in messages.get_messages(self.request)]:
-            messages.add_message(self.request, messages.INFO, message)
+        messages.add_message(self.request,
+                             messages.INFO,
+                             'Please check your email for an activation link.')
 
         return super().form_valid(form)
 
@@ -100,6 +104,15 @@ class LoginForm(JSONFormResponseMixin, FormView):
                 )
                 form.errors['email'] = [error_message.format(email=form.cleaned_data['email'])]
                 return self.form_invalid(form)
+
+            messages.add_message(self.request,
+                                 messages.INFO,
+                                 'Welcome back, {}!'.format(user['firstName']),
+                                 extra_tags='font-weight-bold')
+
+            messages.add_message(self.request,
+                                 messages.INFO,
+                                 "We've logged you in so you can continue using the database.")
 
             return self.form_valid(form)
 
