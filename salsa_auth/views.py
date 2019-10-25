@@ -45,7 +45,6 @@ class JSONFormResponseMixin:
 class SignUpForm(JSONFormResponseMixin, FormView):
     form_class = SignUpForm
     template_name = 'signup.html'
-    redirect_url = '/'
 
     def form_valid(self, form):
         user = self._make_user(form.cleaned_data)
