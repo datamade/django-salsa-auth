@@ -6,7 +6,7 @@ A reusable application to allow users of your Django application to
 ## Pre-requisites
 
 - [jQuery](https://jquery.com/)
-- [Boostrap](https://getbootstrap.com/)
+- [Bootstrap](https://getbootstrap.com/)
 
 ## Quick start
 
