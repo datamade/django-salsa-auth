@@ -31,13 +31,19 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-body">
-                    <h3>You're all set!</h3>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
                     <p>
                     {% for message in get_messages(request) %}
-                        <span class="{{ message.tags }}">{{ message }} </span>
+                        {% if loop.first %}
+                            {% if 'info' in message.tags %}
+                            <h3>You're all set!</h3>
+                            {% elif 'error' in message.tags %}
+                            <h3>Something went wrong.</h3>
+                            {% endif %}
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        {% endif %}
+                        <span class="{{ message.tags }}">{{ message|safe }} </span>
                     {% endfor %}
                     </p>
                 </div>

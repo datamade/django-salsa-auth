@@ -112,10 +112,6 @@ class LoginForm(JSONFormResponseMixin, FormView):
                                  'Welcome back, {}!'.format(user['firstName']),
                                  extra_tags='font-weight-bold')
 
-            messages.add_message(self.request,
-                                 messages.INFO,
-                                 "We've logged you in so you can continue using the database.")
-
             return self.form_valid(form)
 
         return self.form_invalid(form)
@@ -139,8 +135,21 @@ class VerifyEmail(RedirectView):
             return redirect('salsa_auth:authenticate')
 
         else:
-            # TO-DO: Add a message
-            return redirect('salsa_auth:signup')
+            messages.add_message(self.request,
+                                 messages.ERROR,
+                                 'Invalid activation link.',
+                                 extra_tags='font-weight-bold')
+
+            contact_message = (
+                'Think you received this message in error? '
+                '<a href="https://www.bettergov.org/contact/" target="_blank">Get in touch &raquo;</a>'
+            )
+
+            messages.add_message(self.request,
+                                 messages.ERROR,
+                                 contact_message)
+
+            return redirect(settings.SALSA_AUTH_REDIRECT_LOCATION)
 
 
 class Authenticate(RedirectView):
