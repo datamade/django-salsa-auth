@@ -23,7 +23,7 @@ setup(
     ],
     extras_require = {
         'jinja2':  ["jinja2"]
-    }
+    },
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
