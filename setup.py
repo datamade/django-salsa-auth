@@ -21,6 +21,9 @@ setup(
         'Django>=2',
         'requests',
     ],
+    extras_require = {
+        'jinja2':  ["jinja2"]
+    }
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
