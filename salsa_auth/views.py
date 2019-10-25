@@ -92,7 +92,10 @@ class SignUpForm(JSONFormResponseMixin, FormView):
             'uid': uid,
             'token': account_activation_token.make_token(user),
         })
-        send_mail(email_subject, message, 'testing@datamade.us', [user.email])
+        send_mail(email_subject,
+                  message,
+                  getattr(settings, 'DEFAULT_FROM_EMAIL', 'testing@datamade.us'),
+                  [user.email])
 
 
 class LoginForm(JSONFormResponseMixin, FormView):

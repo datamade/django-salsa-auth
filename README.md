@@ -38,6 +38,7 @@ values.
     EMAIL_HOST_USER = ''  # e.g., youremail@email.com
     EMAIL_HOST_PASSWORD = ''
     EMAIL_PORT = 0  # e.g., 587
+    DEFAULT_FROM_EMAIL = ''  # e.g., 'DataMade <testing@datamade.us>'
 
     # Configure salsa_auth
     SALSA_AUTH_API_KEY = ''  # https://help.salsalabs.com/hc/en-us/articles/224470007-Getting-Started#acquiring-a-token
