@@ -1,0 +1,29 @@
+<h3>If you'd like to keep using this free resource, please create an account.</h3>
+<p>Submitting your information will give you free access to all Better Government Association Data & Tools. We'll also send you our latest investigations every week.</p>
+<form class="form" id="signup-form" method="POST" action="{{ url('salsa_auth:signup') }}">
+  <input type="hidden" value="{{ csrf_token }}" name="csrfmiddlewaretoken" />
+  <input type="hidden" value="{{ request.get_full_path }}" name="next" />
+  <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" class="form-control" id="email" name="email" placeholder="Email" required />
+      <small class="form-errors" id="email-errors"></small>
+  </div>
+  <div class="form-group">
+      <label for="first_name">First name</label>
+      <input type="text" class="form-control" id="first_name" name="first_name" placeholder="First name" required />
+      <small class="form-errors" id="first_name-errors"></small>
+  </div>
+  <div class="form-group">
+      <label for="last_name">Last name</label>
+      <input type="text" class="form-control" id="last_name" name="last_name" placeholder="Last name" required />
+      <small class="form-errors" id="last_name-errors"></small>
+  </div>
+  <div class="form-group">
+      <label for="zip_code">ZIP code</label>
+      <input type="number" class="form-control" id="zip_code" name="zip_code" placeholder="ZIP code" required />
+      <small class="form-errors" id="zip_code-errors"></small>
+  </div>
+   <div class="form-group text-center">
+        <button class="btn" id="submit-signup">Submit</button>
+    </div>
+</form>
