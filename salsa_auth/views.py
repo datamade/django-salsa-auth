@@ -78,10 +78,18 @@ class SignUpForm(JSONFormResponseMixin, FormView):
     def _send_verification_email(self, user):
         current_site = get_current_site(self.request)
         email_subject = 'Activate Your Account'
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        # uid will be a bytestring in Django < 2.2. Cast it to a string before
+        # rendering it into the email template.
+        if isinstance(uid, (bytes, bytearray)):
+            uid = uid.decode('utf-8')
+
         message = render_to_string('emails/activate_account.html', {
             'user': user,
             'domain': current_site.domain,
-            'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+            'uid': uid,
             'token': account_activation_token.make_token(user),
         })
         send_mail(email_subject, message, 'testing@datamade.us', [user.email])
@@ -112,10 +120,6 @@ class LoginForm(JSONFormResponseMixin, FormView):
                                  'Welcome back, {}!'.format(user['firstName']),
                                  extra_tags='font-weight-bold')
 
-            messages.add_message(self.request,
-                                 messages.INFO,
-                                 "We've logged you in so you can continue using the database.")
-
             return self.form_valid(form)
 
         return self.form_invalid(form)
@@ -136,11 +140,30 @@ class VerifyEmail(RedirectView):
 
         if link_valid:
             salsa_client.put_supporter(user)
+
+            messages.add_message(self.request,
+                                 messages.INFO,
+                                 'Welcome back, {}!'.format(user.first_name),
+                                 extra_tags='font-weight-bold')
+
             return redirect('salsa_auth:authenticate')
 
         else:
-            # TO-DO: Add a message
-            return redirect('salsa_auth:signup')
+            messages.add_message(self.request,
+                                 messages.ERROR,
+                                 'Invalid activation link.',
+                                 extra_tags='font-weight-bold')
+
+            contact_message = (
+                'Think you received this message in error? '
+                '<a href="https://www.bettergov.org/contact/" target="_blank">Get in touch &raquo;</a>'
+            )
+
+            messages.add_message(self.request,
+                                 messages.ERROR,
+                                 contact_message)
+
+            return redirect(settings.SALSA_AUTH_REDIRECT_LOCATION)
 
 
 class Authenticate(RedirectView):
