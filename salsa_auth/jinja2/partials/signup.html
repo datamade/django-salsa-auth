@@ -2,7 +2,7 @@
 <p>Submitting your information will give you free access to all Better Government Association Data & Tools. We'll also send you our latest investigations every week.</p>
 <form class="form" id="signup-form" method="POST" action="{{ url('salsa_auth:signup') }}">
   <input type="hidden" value="{{ csrf_token }}" name="csrfmiddlewaretoken" />
-  <input type="hidden" value="{{ request.get_full_path }}" name="next" />
+  <input type="hidden" value="{{ request.get_full_path() }}" name="next" />
   <div class="form-group">
       <label for="email">Email</label>
       <input type="email" class="form-control" id="email" name="email" placeholder="Email" required />
