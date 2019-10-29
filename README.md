@@ -51,9 +51,14 @@ values.
     SALSA_AUTH_REDIRECT_LOCATION = '/'
     ```
 
-5. Include the authentication modals and required JavaScript in templates that require login.
+5. Include <a href="https://github.com/keaukraine/bootstrap4-fs-modal">Bootstrap Mobile Fullscreen Modals</a>,
+authentication modals, and required JavaScript in templates that require login.
 
     ```html
+    <link href="{% static 'css/bootstrap-fs-modal.css' %}" rel="stylesheet">
+
+    ...
+
     {% include 'auth_modals.html' %}
 
     ...
