@@ -1,5 +1,5 @@
 <h3>Sign in</h3>
-<p>Enter your email below to verify that you've already subscribed to Better Government Association mailing list.</p>
+<p>Enter your email below to verify that you've already subscribed to Better Government Association mailing list. <strong>If you previously created a login to the Public Salaries Database, or if you subscribed to the BGA mailing list on another BGA Data & Tools site, you can use that email address to sign in.</strong></p>
 <form class="form" id="login-form" method="POST" action="{% url 'salsa_auth:login' %}">
     {% csrf_token %}
     <input type="hidden" value="{{ request.get_full_path }}" name="next" />
