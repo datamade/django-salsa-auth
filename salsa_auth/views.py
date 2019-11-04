@@ -117,9 +117,14 @@ class LoginForm(JSONFormResponseMixin, FormView):
                 form.errors['email'] = [error_message.format(email=form.cleaned_data['email'])]
                 return self.form_invalid(form)
 
+            try:
+                greeting_name = user['firstName']
+            except KeyError:
+                greeting_name = form.cleaned_data['email']
+
             messages.add_message(self.request,
                                  messages.INFO,
-                                 'Welcome back, {}!'.format(user['firstName']),
+                                 'Welcome back, {}!'.format(greeting_name),
                                  extra_tags='font-weight-bold')
 
             return self.form_valid(form)
