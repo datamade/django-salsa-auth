@@ -47,21 +47,43 @@ class SignUpForm(JSONFormResponseMixin, FormView):
     template_name = 'signup.html'
 
     def form_valid(self, form):
-        user = self._make_user(form.cleaned_data)
+        email = form.cleaned_data['email']
 
-        # TO-DO: Potentially intercept SMTP error for undeliverable mail here
-        self._send_verification_email(user)
+        if salsa_client.get_supporter(email):
+            return redirect('salsa_auth:authenticate')
 
-        messages.add_message(self.request,
-                             messages.INFO,
-                             'Thanks for signing up!',
-                             extra_tags='font-weight-bold')
+        try:
+            user = User.objects.filter(email=form_data['email']).first()
 
-        messages.add_message(self.request,
-                             messages.INFO,
-                             'Please check your email for an activation link.')
+        except User.DoesNotExist:
+             user = self._make_user(form.cleaned_data)
+
+            self._send_verification_email(user)
+
+            messages.add_message(self.request,
+                                 messages.INFO,
+                                 'Thanks for signing up!',
+                                 extra_tags='font-weight-bold')
+
+            messages.add_message(self.request,
+                                 messages.INFO,
+                                 'Please check your email for an activation link.')
+
+        else:
+            messages.add_message(self.request,
+                                 messages.INFO,
+                                 'Activation email already sent',
+                                 extra_tags='font-weight-bold')
+
+            message = 'An activation link was sent to <strong>{0}</strong> ' + \
+                      'on <strong>{1}</strong>.'.format(user.email, user.date_joined)
+
+            messages.add_message(self.request,
+                                 messages.INFO,
+                                 message)
 
         return super().form_valid(form)
+
 
     def _make_user(self, form_data):
         zip_code = form_data.pop('zip_code')
