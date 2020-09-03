@@ -35,16 +35,13 @@
                     <p>
                     {% for message in messages %}
                         {% if forloop.first %}
-                            {% if 'info' in message.tags %}
-                            <h3>You're all set!</h3>
-                            {% elif 'error' in message.tags %}
-                            <h3>Something went wrong.</h3>
-                            {% endif %}
+                            <h3>{{ message|safe }}</h3>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
-                        {% endif %}
+                        {% else %}
                         <span class="{{ message.tags }}">{{ message|safe }} </span>
+                        {{ endif }}
                     {% endfor %}
                     </p>
                 </div>

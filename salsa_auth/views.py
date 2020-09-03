@@ -49,38 +49,33 @@ class SignUpForm(JSONFormResponseMixin, FormView):
     def form_valid(self, form):
         email = form.cleaned_data['email']
 
+        # If the email already exists in Salsa, re-verification is not required.
+        # Authenticate the user.
         if salsa_client.get_supporter(email):
             return redirect('salsa_auth:authenticate')
 
-        try:
-            user = User.objects.filter(email=form_data['email']).first()
+        # If the given email is in Salsa, and that email has hard-bounced,
+        # inform the user, and do not send another email to the invalid address.
+        if salsa_client.get_supporter(email, allow_invalid=True):
+            message_title = "Sorry we missed you!"
+            message_body = 'We could not deliver mail to <strong>{0}</strong>. Please supply a working email address.'.format(user.email)
 
-        except User.DoesNotExist:
-             user = self._make_user(form.cleaned_data)
+        user = User.objects.filter(email=email).order_by('date_joined').first()
+
+        if not user:
+            user = self._make_user(form.cleaned_data)
 
             self._send_verification_email(user)
 
-            messages.add_message(self.request,
-                                 messages.INFO,
-                                 'Thanks for signing up!',
-                                 extra_tags='font-weight-bold')
-
-            messages.add_message(self.request,
-                                 messages.INFO,
-                                 'Please check your email for an activation link.')
+            message_title = 'Thanks for signing up!'
+            message_body = 'Please check your email for an activation link.'
 
         else:
-            messages.add_message(self.request,
-                                 messages.INFO,
-                                 'Activation email already sent',
-                                 extra_tags='font-weight-bold')
+            message_title = 'You look familiar!'
+            message_body = 'An activation link was sent to <strong>{0}</strong> on <strong>{1}</strong>.'.format(user.email, datetime.datetime.strftime(user.date_joined, '%B %d, %Y'))
 
-            message = 'An activation link was sent to <strong>{0}</strong> ' + \
-                      'on <strong>{1}</strong>.'.format(user.email, user.date_joined)
-
-            messages.add_message(self.request,
-                                 messages.INFO,
-                                 message)
+        messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
+        messages.add_message(self.request, messages.INFO, message_body)
 
         return super().form_valid(form)
 
@@ -180,11 +175,11 @@ class VerifyEmail(RedirectView):
         else:
             messages.add_message(self.request,
                                  messages.ERROR,
-                                 'Invalid activation link.',
+                                 'Something went wrong.',
                                  extra_tags='font-weight-bold')
 
             contact_message = (
-                'Think you received this message in error? '
+                'You clicked an invalid activation link. Think you received this message in error? '
                 '<a href="https://www.bettergov.org/contact/" target="_blank">Get in touch &raquo;</a>'
             )
 
