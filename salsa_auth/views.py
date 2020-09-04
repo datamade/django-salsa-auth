@@ -9,6 +9,7 @@ from django.core.mail import send_mail
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views.generic import FormView, RedirectView
@@ -51,34 +52,35 @@ class SignUpForm(JSONFormResponseMixin, FormView):
 
         # If the email already exists in Salsa, re-verification is not required.
         # Authenticate the user.
-        if salsa_client.get_supporter(email):
-            return redirect('salsa_auth:authenticate')
+        salsa_user = salsa_client.get_supporter(email)
 
-        # If the given email is in Salsa, and that email has hard-bounced,
-        # inform the user, and do not send another email to the invalid address.
-        if salsa_client.get_supporter(email, allow_invalid=True):
-            message_title = "Sorry we missed you!"
-            message_body = 'We could not deliver mail to <strong>{0}</strong>. Please supply a working email address.'.format(user.email)
+        if salsa_user:
+            messages.add_message(self.request,
+                                 messages.INFO,
+                                 'Welcome back, {}!'.format(salsa_user['firstName']),
+                                 extra_tags='font-weight-bold')
 
-        user = User.objects.filter(email=email).order_by('date_joined').first()
-
-        if not user:
-            user = self._make_user(form.cleaned_data)
-
-            self._send_verification_email(user)
-
-            message_title = 'Thanks for signing up!'
-            message_body = 'Please check your email for an activation link.'
+            self.redirect_url = reverse('salsa_auth:authenticate')
 
         else:
-            message_title = 'You look familiar!'
-            message_body = 'An activation link was sent to <strong>{0}</strong> on <strong>{1}</strong>.'.format(user.email, datetime.datetime.strftime(user.date_joined, '%B %d, %Y'))
+            pending_user = User.objects.filter(email=email).order_by('date_joined').first()
 
-        messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
-        messages.add_message(self.request, messages.INFO, message_body)
+            if not pending_user:
+                new_user = self._make_user(form.cleaned_data)
+
+                self._send_verification_email(new_user)
+
+                message_title = 'Thanks for signing up!'
+                message_body = 'Please check your email for an activation link.'
+
+            else:
+                message_title = 'Verify your email address'
+                message_body = 'We sent an activation link to <strong>{0}</strong> on <strong>{1}</strong>.'.format(pending_user.email, datetime.datetime.strftime(pending_user.date_joined, '%B %d, %Y'))
+
+            messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
+            messages.add_message(self.request, messages.INFO, message_body)
 
         return super().form_valid(form)
-
 
     def _make_user(self, form_data):
         zip_code = form_data.pop('zip_code')
