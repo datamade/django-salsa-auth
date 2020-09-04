@@ -71,11 +71,21 @@ class SignUpForm(JSONFormResponseMixin, FormView):
                 self._send_verification_email(new_user)
 
                 message_title = 'Thanks for signing up!'
-                message_body = 'Please check your email for an activation link.'
+                message_body = '<p>Please check your email for an activation link.</p>'
 
             else:
                 message_title = 'Verify your email address'
-                message_body = 'We sent an activation link to <strong>{0}</strong> on <strong>{1}</strong>.'.format(pending_user.email, datetime.datetime.strftime(pending_user.date_joined, '%B %d, %Y'))
+                message_body = '<p>We sent an activation link to <strong>{0}</strong> on <strong>{1}</strong>.</p>'.format(
+                    pending_user.email,
+                    datetime.datetime.strftime(pending_user.date_joined, '%B %d, %Y')
+                )
+
+            message_body += (
+                "<p>If you don't receive an email from <strong>no-reply@bettergov.org</strong> "
+                'shortly, please be sure to check your email’s spam folder. '
+                'If you continue encountering problems accessing the database, '
+                'please contact our <a href="https://www.bettergov.org/team/jared-rutecki" target="_blank">Data Coordinator</a>.'
+            )
 
             messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
             messages.add_message(self.request, messages.INFO, message_body)
@@ -177,12 +187,12 @@ class VerifyEmail(RedirectView):
         else:
             messages.add_message(self.request,
                                  messages.ERROR,
-                                 'Something went wrong.',
+                                 'Something went wrong',
                                  extra_tags='font-weight-bold')
 
             contact_message = (
                 'You clicked an invalid activation link. Think you received this message in error? '
-                '<a href="https://www.bettergov.org/contact/" target="_blank">Get in touch &raquo;</a>'
+                'Contact our <a href="https://www.bettergov.org/team/jared-rutecki" target="_blank">Data Coordinator</a>.'
             )
 
             messages.add_message(self.request,
