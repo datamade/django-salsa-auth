@@ -117,7 +117,7 @@ class SalsaAPI(object):
         else:
             raise SalsaException(response.text)
 
-    def get_supporter(self, email_address):
+    def get_supporter(self, email_address, allow_invalid=False):
         '''
         Return the first supporter with a matching email address that is valid,
         i.e., does not have a status of 'HARD_BOUNCE'.
@@ -139,12 +139,19 @@ class SalsaAPI(object):
             if response_data['payload']['count'] == 1:
                 supporter, = response_data['payload']['supporters']
 
-                if supporter['result'] == 'FOUND' and self._has_valid_email(supporter, email_address):
-                    return supporter
+                if supporter['result'] == 'FOUND':
+                    if allow_invalid:
+                        return supporter
+
+                    elif self._has_valid_email(supporter, email_address):
+                        return supporter
 
             else:
                 for supporter in response_data['payload']['supporters']:
-                    if self._has_valid_email(supporter, email_address):
+                    if allow_invalid:
+                        return supporter
+
+                    elif self._has_valid_email(supporter, email_address):
                         return supporter
 
         else:

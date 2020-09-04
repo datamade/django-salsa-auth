@@ -9,6 +9,7 @@ from django.core.mail import send_mail
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views.generic import FormView, RedirectView
@@ -47,19 +48,47 @@ class SignUpForm(JSONFormResponseMixin, FormView):
     template_name = 'signup.html'
 
     def form_valid(self, form):
-        user = self._make_user(form.cleaned_data)
+        email = form.cleaned_data['email']
 
-        # TO-DO: Potentially intercept SMTP error for undeliverable mail here
-        self._send_verification_email(user)
+        # If the email already exists in Salsa, re-verification is not required.
+        # Authenticate the user.
+        salsa_user = salsa_client.get_supporter(email)
 
-        messages.add_message(self.request,
-                             messages.INFO,
-                             'Thanks for signing up!',
-                             extra_tags='font-weight-bold')
+        if salsa_user:
+            messages.add_message(self.request,
+                                 messages.INFO,
+                                 'Welcome back, {}!'.format(salsa_user['firstName']),
+                                 extra_tags='font-weight-bold')
 
-        messages.add_message(self.request,
-                             messages.INFO,
-                             'Please check your email for an activation link.')
+            self.redirect_url = reverse('salsa_auth:authenticate')
+
+        else:
+            pending_user = User.objects.filter(email=email).order_by('date_joined').first()
+
+            if not pending_user:
+                new_user = self._make_user(form.cleaned_data)
+
+                self._send_verification_email(new_user)
+
+                message_title = 'Thanks for signing up!'
+                message_body = '<p>Please check your email for an activation link.</p>'
+
+            else:
+                message_title = 'Verify your email address'
+                message_body = '<p>We sent an activation link to <strong>{0}</strong> on <strong>{1}</strong>.</p>'.format(
+                    pending_user.email,
+                    datetime.datetime.strftime(pending_user.date_joined, '%B %d, %Y')
+                )
+
+            message_body += (
+                "<p>If you don't receive an email from <strong>no-reply@bettergov.org</strong> "
+                'shortly, please be sure to check your email’s spam folder. '
+                'If you continue encountering problems accessing the database, '
+                'please contact our <a href="https://www.bettergov.org/team/jared-rutecki" target="_blank">Data Coordinator</a>.'
+            )
+
+            messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
+            messages.add_message(self.request, messages.INFO, message_body)
 
         return super().form_valid(form)
 
@@ -158,12 +187,12 @@ class VerifyEmail(RedirectView):
         else:
             messages.add_message(self.request,
                                  messages.ERROR,
-                                 'Invalid activation link.',
+                                 'Something went wrong',
                                  extra_tags='font-weight-bold')
 
             contact_message = (
-                'Think you received this message in error? '
-                '<a href="https://www.bettergov.org/contact/" target="_blank">Get in touch &raquo;</a>'
+                'You clicked an invalid activation link. Think you received this message in error? '
+                'Contact our <a href="https://www.bettergov.org/team/jared-rutecki" target="_blank">Data Coordinator</a>.'
             )
 
             messages.add_message(self.request,
