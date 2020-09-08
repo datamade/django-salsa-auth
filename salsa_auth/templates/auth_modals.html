@@ -41,7 +41,7 @@
                             </button>
                         {% else %}
                         <span class="{{ message.tags }}">{{ message|safe }} </span>
-                        {{ endif }}
+                        {% endif %}
                     {% endfor %}
                     </p>
                 </div>
