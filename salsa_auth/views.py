@@ -55,9 +55,12 @@ class SignUpForm(JSONFormResponseMixin, FormView):
         salsa_user = salsa_client.get_supporter(email)
 
         if salsa_user:
+            # Sometimes the user's first name is not in Salsa.
+            welcome_message = 'Welcome back, {}!'.format(salsa_user.get('firstName', email))
+
             messages.add_message(self.request,
                                  messages.INFO,
-                                 'Welcome back, {}!'.format(salsa_user['firstName']),
+                                 welcome_message,
                                  extra_tags='font-weight-bold')
 
             self.redirect_url = reverse('salsa_auth:authenticate')
