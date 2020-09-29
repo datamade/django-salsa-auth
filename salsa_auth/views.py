@@ -96,6 +96,8 @@ class SignUpForm(JSONFormResponseMixin, FormView):
         return super().form_valid(form)
 
     def _make_user(self, form_data):
+        form_data.pop('address')
+
         zip_code = form_data.pop('zip_code')
 
         user = User.objects.create(**form_data, username=str(uuid4()).split('-')[0])
