@@ -3,6 +3,8 @@
 A reusable application to allow users of your Django application to
 "authenticate" against your [Salsa](https://www.salsalabs.com/) user store.
 
+## TODO: Update README to include instructions for reCAPTCHA.
+
 ## Pre-requisites
 
 - [jQuery](https://jquery.com/)
