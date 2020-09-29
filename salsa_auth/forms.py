@@ -10,12 +10,10 @@ class BootstrapMixin:
 
 
 class HiddenFieldForm(forms.Form):
-    address = forms.CharField(widget=forms.HiddenInput())
+    address = forms.CharField(widget=forms.HiddenInput(), required=False)
 
     def clean_address(self):
-        print(self.cleaned_data, flush=True)
         if self.cleaned_data.get('address', None):
-            print('Raising ValidationError', flush=True)
             raise ValidationError('Invalid value for hidden field')
 
 
