@@ -48,6 +48,8 @@ class SignUpForm(JSONFormResponseMixin, FormView):
     template_name = 'signup.html'
 
     def form_valid(self, form):
+        print(form.cleaned_data, flush=True)
+
         email = form.cleaned_data['email']
 
         # If the email already exists in Salsa, re-verification is not required.

@@ -13,9 +13,9 @@ class HiddenFieldForm(forms.Form):
     address = forms.CharField(widget=forms.HiddenInput())
 
     def clean_address(self):
-        print(self.cleaned_data)
+        print(self.cleaned_data, flush=True)
         if self.cleaned_data.get('address', None):
-            print('Raising ValidationError')
+            print('Raising ValidationError', flush=True)
             raise ValidationError('Invalid value for hidden field')
 
 
