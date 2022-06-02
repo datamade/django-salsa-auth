@@ -23,7 +23,43 @@
       <input type="number" class="form-control" id="zip_code" name="zip_code" placeholder="ZIP code" required />
       <small class="form-errors" id="zip_code-errors"></small>
   </div>
-   <div class="form-group text-center">
-        <button class="btn" id="submit-signup">Submit</button>
-    </div>
+  <div class="form-group">
+      <input type="hidden" name="address" value="" />
+  </div>
+  <div class="form-group">
+      <input type="hidden" id="g-recaptcha-response" name="g-recaptcha-response" value="">
+  </div>
+  <div class="form-group text-center">
+    <button
+      class="btn"
+      id="submit-signup">Submit</button>
+  </div>
 </form>
+<script>
+  // Disable the submit button under reCAPTCHA loads
+  $('#submit-signup').prop('disabled', true);
+
+  // Define function to fire once the reCAPTCHA library loads
+  function onloadCallback() {
+    $('#submit-signup').prop('disabled', false);
+
+    $('#submit-signup').on('click', function(e) {
+      e.preventDefault();
+
+      // disable button to prevent double-click
+      $('#submit-signup').prop('disabled', true);
+
+      grecaptcha.execute('{{ captcha_site_key }}', {action: 'signup'}).then(function(token) {
+        $('[name="g-recaptcha-response"]').val(token);
+        var form_data = getFormData($('#signup-form'));
+        submitForm('/salsa/signup/', form_data);
+      }, function(error) {
+        console.error(error);
+      });
+    });
+  };
+
+  // Add the onload function to the global namespace so reCAPTCHA can find it
+  window.onloadCallback = onloadCallback;
+</script>
+<script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback&render={{ captcha_site_key }}" defer async"></script>

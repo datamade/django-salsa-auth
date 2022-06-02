@@ -1,4 +1,5 @@
 import datetime
+import logging
 from uuid import uuid4
 
 from django.conf import settings
@@ -6,6 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
+from django.core.exceptions import ValidationError
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
@@ -13,7 +15,9 @@ from django.urls import reverse
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views.generic import FormView, RedirectView
+import requests
 
+from salsa_auth.constants import TEST_PRIVATE_KEY
 from salsa_auth.forms import SignUpForm, LoginForm
 from salsa_auth.models import UserZipCode
 from salsa_auth.salsa import client as salsa_client
@@ -49,6 +53,41 @@ class SignUpForm(JSONFormResponseMixin, FormView):
 
     def form_valid(self, form):
         email = form.cleaned_data['email']
+
+        token = form.data['g-recaptcha-response']
+
+        try:
+            score = self._get_captcha_score(token)
+        except ValidationError:
+            raise
+        except requests.exceptions.ContentDecodingError:
+            raise ValidationError('Could not get reCAPTCHA score')
+        else:
+            user_is_a_bot = score < getattr(settings, 'GOOGLE_CAPTCHA_BOT_THRESHOLD', 0.1)
+
+            user_might_be_a_bot = (
+                score > getattr(settings, 'GOOGLE_CAPTCHA_BOT_THRESHOLD', 0.1) and
+                score < getattr(settings, 'GOOGLE_CAPTCHA_UNCERTAIN_THRESHOLD', 0.5)
+            )
+
+            if user_is_a_bot:
+                return super().form_invalid(form)
+
+            elif user_might_be_a_bot:
+                # User might not be a bot. If the address looks non-spammy, Dedupe.io
+                # staff should send the user an email to confirm that they want
+                # an account.
+                if api.sentry:
+                    logging.warning(
+                        'CAPTCHA validation failed for signup: {}'.format(email)
+                    )
+                    error = (
+                        'We could not verify your email address. Please contact please contact our '
+                        '<a href="https://www.bettergov.org/team/jared-rutecki" target="_blank">Data Coordinator</a>.'
+                    )
+                    form.email.errors.append(error)
+
+                    return super().form_invalid(form)
 
         # If the email already exists in Salsa, re-verification is not required.
         # Authenticate the user.
@@ -95,7 +134,36 @@ class SignUpForm(JSONFormResponseMixin, FormView):
 
         return super().form_valid(form)
 
+    def _get_captcha_score(self, token):
+        captcha_response_token = token
+
+        if captcha_response_token is None:
+            raise ValidationError('Submitted form is missing g-recaptcha-response field')
+
+        siteverify_url = 'https://www.google.com/recaptcha/api/siteverify'
+
+        captcha_response = requests.post(siteverify_url, data={
+            'secret': getattr(settings, 'RECAPTCHA_PRIVATE_KEY', TEST_PRIVATE_KEY),
+            'response': captcha_response_token,
+            'remoteip': self.request.META.get('HTTP_X_FORWARDED_FOR', '') or self.request.META.get('REMOTE_ADDR', ''),
+        })
+
+        captcha_response.raise_for_status()
+
+        captcha_response_data = captcha_response.json()
+
+        response_failed = (captcha_response_data.get('success') is None or
+                           captcha_response_data.get('score') is None)
+
+        if response_failed:
+            msg = 'Malformed reCAPTCHA response: {}'.format(captcha_response_data)
+            raise requests.exceptions.ContentDecodingError(msg)
+
+        return captcha_response_data['score']
+
     def _make_user(self, form_data):
+        form_data.pop('address')
+
         zip_code = form_data.pop('zip_code')
 
         user = User.objects.create(**form_data, username=str(uuid4()).split('-')[0])
