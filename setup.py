@@ -20,6 +20,7 @@ setup(
     install_requires=[
         'Django>=2',
         'requests',
+        'email-normalize'
     ],
     extras_require = {
         'jinja2':  ["jinja2"]

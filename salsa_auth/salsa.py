@@ -2,6 +2,7 @@ import json
 
 from django.conf import settings
 import requests
+import email_normalize
 
 
 class SalsaException(Exception):
@@ -60,7 +61,7 @@ class SalsaAPI(object):
         '''
         for contact in supporter['contacts']:
             email_valid = (contact['type'] == 'EMAIL' and
-                           contact['value'] == email_address and
+                           email_normalize.normalize(contact['value']) == email_normalize.normalize(email_address) and
                            contact['status'] != 'HARD_BOUNCE')
 
             if email_valid:
