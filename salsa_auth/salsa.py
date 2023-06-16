@@ -4,6 +4,9 @@ from django.conf import settings
 import requests
 import email_normalize
 
+import mailchimp_marketing as MailchimpMarketing
+from mailchimp_marketing.api_client import ApiClientError
+
 
 class SalsaException(Exception):
     pass
@@ -15,6 +18,9 @@ class SalsaAPI(object):
     https://help.salsalabs.com/hc/en-us/articles/224470107-Engage-API-Supporter-Data
     '''
     HOSTNAME = 'https://api.salsalabs.org'
+    LIST_ID = settings.MAILCHIMP_LIST_ID
+    API_KEY = settings.MAILCHIMP_API_KEY
+    SERVER = settings.MAILCHIMP_SERVER
 
     SAMPLE_PUT_RESPONSE = json.dumps({
         'payload': {
@@ -59,13 +65,11 @@ class SalsaAPI(object):
         Determine whether a supporter has a valid contact matching the given
         email address.
         '''
-        for contact in supporter['contacts']:
-            email_valid = (contact['type'] == 'EMAIL' and
-                           email_normalize.normalize(contact['value']) == email_normalize.normalize(email_address) and
-                           contact['status'] != 'HARD_BOUNCE')
+        email_valid = (email_normalize.normalize(supporter["email_address"]) == email_normalize.normalize(email_address) and
+                        supporter['status'] != 'unsubscribed')
 
-            if email_valid:
-                return True
+        if email_valid:
+            return True
 
         return False
 
@@ -73,90 +77,62 @@ class SalsaAPI(object):
         '''
         Add or update supporter.
         '''
-        endpoint = '{}/api/integration/ext/v1/supporters'.format(self.HOSTNAME)
 
         payload = {
-            'supporters': [
-                {
-                    'firstName': user.first_name,
-                    'lastName': user.last_name,
-                    'address': {'postalCode': user.userzipcode_set.get().zip_code},
-                    'contacts': [{
-                        'type': 'EMAIL',
-                        'value': user.email,
-                        'status':'OPT_IN'
-                    }],
-                }
-            ]
+            "email_address": user.email,
+            "status": "subscribed",
+            "merge_fields": {
+                "FNAME": user.first_name,
+                "LNAME": user.last_name,
+            }
         }
 
-        response = requests.put(
-            endpoint,
-            json={'payload': payload},
-            headers={'authToken': settings.SALSA_AUTH_API_KEY}
-        )
+        subscriber = payload["email_address"]
 
-        response_data = json.loads(response.text)
+        try:
+            client = MailchimpMarketing.Client()
+            client.set_config({
+                "api_key": self.API_KEY,
+                "server": self.SERVER
+            })
 
-        if response.status_code == 200:
-            supporter, = response_data['payload']['supporters']
+            response = client.lists.set_list_member(self.LIST_ID, subscriber, payload)
 
-            if supporter['result'] in ('ADDED', 'UPDATED'):
-                return supporter
+        except ApiClientError as error:
+            print("Error: {}".format(error.text))
 
-            elif supporter['result'] == 'VALIDATION_ERROR':
-                error = ''
-
-                for e in supporter['contacts'][0].get('errors', []) + supporter['address'].get('errors', []):
-                    error += self._make_error_message(error)
-
-                raise SalsaException(error)
-
-            else:
-                raise SalsaException('Supporter could not be added due to {}'.format(supporter['result']))
-
-        else:
-            raise SalsaException(response.text)
+        return response  # A dict representing the member that has been added
 
     def get_supporter(self, email_address, allow_invalid=False):
         '''
         Return the first supporter with a matching email address that is valid,
         i.e., does not have a status of 'HARD_BOUNCE'.
         '''
-        endpoint = '{}/api/integration/ext/v1/supporters/search'.format(self.HOSTNAME)
 
-        payload = {
-            'identifiers': [email_address],
-            'identifierType': 'EMAIL_ADDRESS'
-        }
+        try:
+            client = MailchimpMarketing.Client()
+            client.set_config({
+                "api_key": self.API_KEY,
+                "server": self.SERVER
+            })
 
-        response = requests.post(endpoint,
-                                 json={'payload': payload},
-                                 headers={'authToken': settings.SALSA_AUTH_API_KEY})
+            response = client.searchMembers.search(query=email_address, fields=["exact_matches"])
 
-        if response.status_code == 200:
-            response_data = json.loads(response.text)
+        except ApiClientError as error:
+            print("Error: {}".format(error.text))
 
-            if response_data['payload']['count'] == 1:
-                supporter, = response_data['payload']['supporters']
+        if response['exact_matches']['total_items'] == 1:
+            supporter = response['exact_matches']['members'][0]
 
-                if supporter['result'] == 'FOUND':
-                    if allow_invalid:
-                        return supporter
+            if allow_invalid:
+                return supporter
 
-                    elif self._has_valid_email(supporter, email_address):
-                        return supporter
-
-            else:
-                for supporter in response_data['payload']['supporters']:
-                    if allow_invalid:
-                        return supporter
-
-                    elif self._has_valid_email(supporter, email_address):
-                        return supporter
+            elif self._has_valid_email(supporter, email_address):
+                return supporter
 
         else:
-            raise SalsaException(response.text)
+            # No single, exact match found
+            return None
 
 
 client = SalsaAPI()

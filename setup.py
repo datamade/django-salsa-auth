@@ -20,7 +20,8 @@ setup(
     install_requires=[
         'Django>=2',
         'requests',
-        'email-normalize'
+        'email-normalize<=0.2.1',
+        'mailchimp-marketing'
     ],
     extras_require = {
         'jinja2':  ["jinja2"]

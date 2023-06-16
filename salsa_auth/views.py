@@ -74,20 +74,20 @@ class SignUpForm(JSONFormResponseMixin, FormView):
                 return super().form_invalid(form)
 
             elif user_might_be_a_bot:
-                # User might not be a bot. If the address looks non-spammy, Dedupe.io
-                # staff should send the user an email to confirm that they want
-                # an account.
-                if api.sentry:
-                    logging.warning(
-                        'CAPTCHA validation failed for signup: {}'.format(email)
-                    )
-                    error = (
-                        'We could not verify your email address. Please contact please contact our '
-                        '<a href="https://www.bettergov.org/team/jared-rutecki" target="_blank">Data Coordinator</a>.'
-                    )
-                    form.email.errors.append(error)
+                logging.warning(
+                    'CAPTCHA validation failed for signup: {}'.format(email)
+                )
 
-                    return super().form_invalid(form)
+                message_title = 'Validation Error'
+                message_body = (
+                    'We could not validate your email address. Please contact our '
+                    '<a href="mailto:help@illinoisanswers.org" target="_blank">Data Coordinator</a>.'
+                )
+
+                messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
+                messages.add_message(self.request, messages.INFO, message_body)
+
+                return super().form_invalid(form)
 
         # If the email already exists in Salsa, re-verification is not required.
         # Authenticate the user.
@@ -95,7 +95,7 @@ class SignUpForm(JSONFormResponseMixin, FormView):
 
         if salsa_user:
             # Sometimes the user's first name is not in Salsa.
-            welcome_message = 'Welcome back, {}!'.format(salsa_user.get('firstName', email))
+            welcome_message = 'Welcome back, {}!'.format(salsa_user['merge_fields'].get('FNAME', email))  
 
             messages.add_message(self.request,
                                  messages.INFO,
@@ -126,7 +126,7 @@ class SignUpForm(JSONFormResponseMixin, FormView):
                 "<p>If you don't receive an email from <strong>no-reply@bettergov.org</strong> "
                 'shortly, please be sure to check your email’s spam folder. '
                 'If you continue encountering problems accessing the database, '
-                'please contact our <a href="https://www.bettergov.org/team/jared-rutecki" target="_blank">Data Coordinator</a>.'
+                'please contact our <a href="mailto:help@illinoisanswers.org" target="_blank">Data Coordinator</a>.'
             )
 
             messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
@@ -218,7 +218,7 @@ class LoginForm(JSONFormResponseMixin, FormView):
                 return self.form_invalid(form)
 
             try:
-                greeting_name = user['firstName']
+                greeting_name = user['merge_fields']['FNAME']
             except KeyError:
                 greeting_name = form.cleaned_data['email']
 
@@ -246,11 +246,11 @@ class VerifyEmail(RedirectView):
         link_valid = user is not None and account_activation_token.check_token(user, token)
 
         if link_valid:
-            salsa_client.put_supporter(user)
-
+            mailchimp_user = salsa_client.put_supporter(user)
+            email = mailchimp_user['email_address']
             messages.add_message(self.request,
                                  messages.INFO,
-                                 'Welcome back, {}!'.format(user.first_name),
+                                 'Welcome back, {}!'.format(mailchimp_user['merge_fields'].get('FNAME', email)),
                                  extra_tags='font-weight-bold')
 
             return redirect('salsa_auth:authenticate')
