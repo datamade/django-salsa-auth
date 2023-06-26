@@ -5,9 +5,9 @@
 
 <p><small>Note: If you previously created a login to the Public Salaries Database, or if you subscribed to the BGA mailing list on another BGA Data & Tools site, you can use that email address to sign in.</small></p>
 
-<form class="form" id="login-form" method="POST" action="{{ url('salsa_auth:login') }}">
-    <input type="hidden" value="{{ csrf_token }}" name="csrfmiddlewaretoken" />
-    <input type="hidden" value="{{ request.get_full_path() }}" name="next" />
+<form class="form" id="login-form" method="POST" action="{% url 'mailchimp_auth:login' %}">
+    {% csrf_token %}
+    <input type="hidden" value="{{ request.get_full_path }}" name="next" />
     <div class="form-group">
         <label for="email">Email</label>
         <input type="email" class="form-control" id="email" name="email" placeholder="Email" required />

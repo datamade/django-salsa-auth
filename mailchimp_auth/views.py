@@ -17,11 +17,11 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views.generic import FormView, RedirectView
 import requests
 
-from salsa_auth.constants import TEST_PRIVATE_KEY
-from salsa_auth.forms import SignUpForm, LoginForm
-from salsa_auth.models import UserZipCode
-from salsa_auth.salsa import client as salsa_client
-from salsa_auth.tokens import account_activation_token
+from mailchimp_auth.constants import TEST_PRIVATE_KEY
+from mailchimp_auth.forms import SignUpForm, LoginForm
+from mailchimp_auth.models import UserZipCode
+from mailchimp_auth.mailchimp import client as mailchimp_client
+from mailchimp_auth.tokens import account_activation_token
 
 
 class JSONFormResponseMixin:
@@ -89,20 +89,20 @@ class SignUpForm(JSONFormResponseMixin, FormView):
 
                 return super().form_invalid(form)
 
-        # If the email already exists in Salsa, re-verification is not required.
+        # If the email already exists in Mailchimp, re-verification is not required.
         # Authenticate the user.
-        salsa_user = salsa_client.get_supporter(email)
+        mailchimp_user = mailchimp_client.get_supporter(email)
 
-        if salsa_user:
-            # Sometimes the user's first name is not in Salsa.
-            welcome_message = 'Welcome back, {}!'.format(salsa_user['merge_fields'].get('FNAME', email))  
+        if mailchimp_user:
+            # Sometimes the user's first name is not in Mailchimp.
+            welcome_message = 'Welcome back, {}!'.format(mailchimp_user['merge_fields'].get('FNAME', email))  
 
             messages.add_message(self.request,
                                  messages.INFO,
                                  welcome_message,
                                  extra_tags='font-weight-bold')
 
-            self.redirect_url = reverse('salsa_auth:authenticate')
+            self.redirect_url = reverse('mailchimp_auth:authenticate')
 
         else:
             pending_user = User.objects.filter(email=email).order_by('date_joined').first()
@@ -200,13 +200,13 @@ class SignUpForm(JSONFormResponseMixin, FormView):
 class LoginForm(JSONFormResponseMixin, FormView):
     form_class = LoginForm
     template_name = 'login.html'
-    redirect_url = '/salsa/authenticate'
+    redirect_url = '/mailchimp/authenticate'
 
     def post(self, *args, **kwargs):
         form = self.get_form()
 
         if form.is_valid():
-            user = salsa_client.get_supporter(form.cleaned_data['email'])
+            user = mailchimp_client.get_supporter(form.cleaned_data['email'])
 
             if not user:
                 error_message = (
@@ -246,14 +246,14 @@ class VerifyEmail(RedirectView):
         link_valid = user is not None and account_activation_token.check_token(user, token)
 
         if link_valid:
-            mailchimp_user = salsa_client.put_supporter(user)
+            mailchimp_user = mailchimp_client.put_supporter(user)
             email = mailchimp_user['email_address']
             messages.add_message(self.request,
                                  messages.INFO,
                                  'Welcome back, {}!'.format(mailchimp_user['merge_fields'].get('FNAME', email)),
                                  extra_tags='font-weight-bold')
 
-            return redirect('salsa_auth:authenticate')
+            return redirect('mailchimp_auth:authenticate')
 
         else:
             messages.add_message(self.request,
@@ -270,20 +270,20 @@ class VerifyEmail(RedirectView):
                                  messages.ERROR,
                                  contact_message)
 
-            return redirect(settings.SALSA_AUTH_REDIRECT_LOCATION)
+            return redirect(settings.MAILCHIMP_AUTH_REDIRECT_LOCATION)
 
 
 class Authenticate(RedirectView):
-    url = settings.SALSA_AUTH_REDIRECT_LOCATION
+    url = settings.MAILCHIMP_AUTH_REDIRECT_LOCATION
 
     def get(self, *args, **kwargs):
         response = HttpResponseRedirect(self.url)
 
         response.set_cookie(
-            settings.SALSA_AUTH_COOKIE_NAME,
+            settings.MAILCHIMP_AUTH_COOKIE_NAME,
             'true',
             expires=datetime.datetime.now() + datetime.timedelta(weeks=52),
-            domain=settings.SALSA_AUTH_COOKIE_DOMAIN,
+            domain=settings.MAILCHIMP_AUTH_COOKIE_DOMAIN,
         )
 
         messages.add_message(self.request,
