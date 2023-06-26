@@ -1,6 +1,6 @@
 include LICENSE
 include README.md
-recursive-include salsa_auth/static *
-recursive-include salsa_auth/templates *
-recursive-include salsa_auth/jinja2 *
-recursive-include salsa_auth/migrations *
+recursive-include mailchimp_auth/static *
+recursive-include mailchimp_auth/templates *
+recursive-include mailchimp_auth/jinja2 *
+recursive-include mailchimp_auth/migrations *
