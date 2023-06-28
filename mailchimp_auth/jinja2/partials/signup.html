@@ -1,6 +1,6 @@
 <h3>If you'd like to keep using this free resource, please create an account.</h3>
 <p>Submitting your information will give you free access to all Better Government Association Data & Tools. We'll also send you our latest investigations every week.</p>
-<form class="form" id="signup-form" method="POST" action="{{ url('salsa_auth:signup') }}">
+<form class="form" id="signup-form" method="POST" action="{{ url('mailchimp_auth:signup') }}">
   <input type="hidden" value="{{ csrf_token }}" name="csrfmiddlewaretoken" />
   <input type="hidden" value="{{ request.get_full_path() }}" name="next" />
   <div class="form-group">
@@ -52,7 +52,7 @@
       grecaptcha.execute('{{ captcha_site_key }}', {action: 'signup'}).then(function(token) {
         $('[name="g-recaptcha-response"]').val(token);
         var form_data = getFormData($('#signup-form'));
-        submitForm('/salsa/signup/', form_data);
+        submitForm('/mailchimp/signup/', form_data);
       }, function(error) {
         console.error(error);
       });

@@ -33,5 +33,5 @@ $(document).on('click', '.toggle-login-signup', function(e){
 $('#login-form').submit(function(e) {
     e.preventDefault();
     var form_data = getFormData($('#login-form'));
-    submitForm('/salsa/login/', form_data);
+    submitForm('/mailchimp/login/', form_data);
 });

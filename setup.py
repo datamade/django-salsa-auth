@@ -8,19 +8,20 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
-    name='django-salsa-auth',
+    name='django-mailchimp-auth',
     version='0.1',
     packages=find_packages(),
     include_package_data=True,
     license='BSD License',  # example license
-    description='A simple Django app to authenticate users with Salsa.',
+    description='A simple Django app to authenticate users with Mailchimp.',
     long_description=README,
     author='Hannah Cushman',
     author_email='hannah.cushman@gmail.com',
     install_requires=[
         'Django>=2',
         'requests',
-        'email-normalize'
+        'email-normalize<=0.2.1',
+        'mailchimp-marketing'
     ],
     extras_require = {
         'jinja2':  ["jinja2"]

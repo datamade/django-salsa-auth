@@ -17,11 +17,11 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views.generic import FormView, RedirectView
 import requests
 
-from salsa_auth.constants import TEST_PRIVATE_KEY
-from salsa_auth.forms import SignUpForm, LoginForm
-from salsa_auth.models import UserZipCode
-from salsa_auth.salsa import client as salsa_client
-from salsa_auth.tokens import account_activation_token
+from mailchimp_auth.constants import TEST_PRIVATE_KEY
+from mailchimp_auth.forms import SignUpForm, LoginForm
+from mailchimp_auth.models import UserZipCode
+from mailchimp_auth.mailchimp import client as mailchimp_client
+from mailchimp_auth.tokens import account_activation_token
 
 
 class JSONFormResponseMixin:
@@ -74,35 +74,44 @@ class SignUpForm(JSONFormResponseMixin, FormView):
                 return super().form_invalid(form)
 
             elif user_might_be_a_bot:
-                # User might not be a bot. If the address looks non-spammy, Dedupe.io
-                # staff should send the user an email to confirm that they want
-                # an account.
-                if api.sentry:
-                    logging.warning(
-                        'CAPTCHA validation failed for signup: {}'.format(email)
-                    )
-                    error = (
-                        'We could not verify your email address. Please contact please contact our '
-                        '<a href="https://www.bettergov.org/team/jared-rutecki" target="_blank">Data Coordinator</a>.'
-                    )
-                    form.email.errors.append(error)
+                logging.warning(
+                    'CAPTCHA validation failed for signup: {}'.format(email)
+                )
 
-                    return super().form_invalid(form)
+                message_title = 'Validation Error'
+                message_body = (
+                    'We could not validate your email address. Please contact our '
+                    '<a href="mailto:help@illinoisanswers.org" target="_blank">Data Coordinator</a>.'
+                )
 
-        # If the email already exists in Salsa, re-verification is not required.
+                messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
+                messages.add_message(self.request, messages.INFO, message_body)
+
+                return super().form_invalid(form)
+
+        # If the email already exists in Mailchimp, re-verification is not required.
         # Authenticate the user.
-        salsa_user = salsa_client.get_supporter(email)
+        mailchimp_user = mailchimp_client.get_supporter(email)
 
-        if salsa_user:
-            # Sometimes the user's first name is not in Salsa.
-            welcome_message = 'Welcome back, {}!'.format(salsa_user.get('firstName', email))
+        if mailchimp_user == 'error':
+            message_title = 'Something went wrong, please try again.'
+            message_body = (
+                '<p>If you continue encountering problems accessing the database, '
+                'please contact our <a href="mailto:help@illinoisanswers.org" target="_blank">Data Coordinator</a>.'
+            )
+
+            messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
+            messages.add_message(self.request, messages.INFO, message_body)
+        elif mailchimp_user:
+            # Sometimes the user's first name is not in Mailchimp.
+            welcome_message = 'Welcome back, {}!'.format(mailchimp_user['merge_fields'].get('FNAME', email))  
 
             messages.add_message(self.request,
                                  messages.INFO,
                                  welcome_message,
                                  extra_tags='font-weight-bold')
 
-            self.redirect_url = reverse('salsa_auth:authenticate')
+            self.redirect_url = reverse('mailchimp_auth:authenticate')
 
         else:
             pending_user = User.objects.filter(email=email).order_by('date_joined').first()
@@ -126,7 +135,7 @@ class SignUpForm(JSONFormResponseMixin, FormView):
                 "<p>If you don't receive an email from <strong>no-reply@bettergov.org</strong> "
                 'shortly, please be sure to check your email’s spam folder. '
                 'If you continue encountering problems accessing the database, '
-                'please contact our <a href="https://www.bettergov.org/team/jared-rutecki" target="_blank">Data Coordinator</a>.'
+                'please contact our <a href="mailto:help@illinoisanswers.org" target="_blank">Data Coordinator</a>.'
             )
 
             messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
@@ -200,13 +209,13 @@ class SignUpForm(JSONFormResponseMixin, FormView):
 class LoginForm(JSONFormResponseMixin, FormView):
     form_class = LoginForm
     template_name = 'login.html'
-    redirect_url = '/salsa/authenticate'
+    redirect_url = '/mailchimp/authenticate'
 
     def post(self, *args, **kwargs):
         form = self.get_form()
 
         if form.is_valid():
-            user = salsa_client.get_supporter(form.cleaned_data['email'])
+            user = mailchimp_client.get_supporter(form.cleaned_data['email'])
 
             if not user:
                 error_message = (
@@ -216,9 +225,16 @@ class LoginForm(JSONFormResponseMixin, FormView):
                 )
                 form.errors['email'] = [error_message.format(email=form.cleaned_data['email'])]
                 return self.form_invalid(form)
+            elif user == 'error':
+                error_message = (
+                    '<p>Something went wrong, please try again. If you continue encountering problems accessing the database, '
+                    'please contact our <a href="mailto:help@illinoisanswers.org" target="_blank">Data Coordinator</a>.'
+                )
+                form.errors['email'] = [error_message.format(email=form.cleaned_data['email'])]
+                return self.form_invalid(form)
 
             try:
-                greeting_name = user['firstName']
+                greeting_name = user['merge_fields']['FNAME']
             except KeyError:
                 greeting_name = form.cleaned_data['email']
 
@@ -246,14 +262,31 @@ class VerifyEmail(RedirectView):
         link_valid = user is not None and account_activation_token.check_token(user, token)
 
         if link_valid:
-            salsa_client.put_supporter(user)
+            mailchimp_user = mailchimp_client.put_supporter(user)
 
-            messages.add_message(self.request,
-                                 messages.INFO,
-                                 'Welcome back, {}!'.format(user.first_name),
-                                 extra_tags='font-weight-bold')
+            if mailchimp_user == 'error':
+                messages.add_message(self.request,
+                    messages.ERROR,
+                    'Something went wrong',
+                    extra_tags='font-weight-bold')
 
-            return redirect('salsa_auth:authenticate')
+                error_message = (
+                    'Please try to use the activation link again. If you continue encountering problems accessing the database, '
+                    'please contact our <a href="mailto:help@illinoisanswers.org" target="_blank">Data Coordinator</a>.'
+                )
+
+                messages.add_message(self.request,
+                                    messages.ERROR,
+                                    error_message)
+                return redirect(settings.MAILCHIMP_AUTH_REDIRECT_LOCATION)
+            else:
+                email = mailchimp_user['email_address']
+                messages.add_message(self.request,
+                                    messages.INFO,
+                                    'Welcome back, {}!'.format(mailchimp_user['merge_fields'].get('FNAME', email)),
+                                    extra_tags='font-weight-bold')
+
+                return redirect('mailchimp_auth:authenticate')
 
         else:
             messages.add_message(self.request,
@@ -270,20 +303,20 @@ class VerifyEmail(RedirectView):
                                  messages.ERROR,
                                  contact_message)
 
-            return redirect(settings.SALSA_AUTH_REDIRECT_LOCATION)
+            return redirect(settings.MAILCHIMP_AUTH_REDIRECT_LOCATION)
 
 
 class Authenticate(RedirectView):
-    url = settings.SALSA_AUTH_REDIRECT_LOCATION
+    url = settings.MAILCHIMP_AUTH_REDIRECT_LOCATION
 
     def get(self, *args, **kwargs):
         response = HttpResponseRedirect(self.url)
 
         response.set_cookie(
-            settings.SALSA_AUTH_COOKIE_NAME,
+            settings.MAILCHIMP_AUTH_COOKIE_NAME,
             'true',
             expires=datetime.datetime.now() + datetime.timedelta(weeks=52),
-            domain=settings.SALSA_AUTH_COOKIE_DOMAIN,
+            domain=settings.MAILCHIMP_AUTH_COOKIE_DOMAIN,
         )
 
         messages.add_message(self.request,
