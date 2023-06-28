@@ -93,7 +93,16 @@ class SignUpForm(JSONFormResponseMixin, FormView):
         # Authenticate the user.
         mailchimp_user = mailchimp_client.get_supporter(email)
 
-        if mailchimp_user:
+        if mailchimp_user == 'error':
+            message_title = 'Something went wrong, please try again.'
+            message_body = (
+                '<p>If you continue encountering problems accessing the database, '
+                'please contact our <a href="mailto:help@illinoisanswers.org" target="_blank">Data Coordinator</a>.'
+            )
+
+            messages.add_message(self.request, messages.INFO, message_title, extra_tags='font-weight-bold')
+            messages.add_message(self.request, messages.INFO, message_body)
+        elif mailchimp_user:
             # Sometimes the user's first name is not in Mailchimp.
             welcome_message = 'Welcome back, {}!'.format(mailchimp_user['merge_fields'].get('FNAME', email))  
 
@@ -216,6 +225,13 @@ class LoginForm(JSONFormResponseMixin, FormView):
                 )
                 form.errors['email'] = [error_message.format(email=form.cleaned_data['email'])]
                 return self.form_invalid(form)
+            elif user == 'error':
+                error_message = (
+                    '<p>Something went wrong, please try again. If you continue encountering problems accessing the database, '
+                    'please contact our <a href="mailto:help@illinoisanswers.org" target="_blank">Data Coordinator</a>.'
+                )
+                form.errors['email'] = [error_message.format(email=form.cleaned_data['email'])]
+                return self.form_invalid(form)
 
             try:
                 greeting_name = user['merge_fields']['FNAME']
@@ -247,13 +263,30 @@ class VerifyEmail(RedirectView):
 
         if link_valid:
             mailchimp_user = mailchimp_client.put_supporter(user)
-            email = mailchimp_user['email_address']
-            messages.add_message(self.request,
-                                 messages.INFO,
-                                 'Welcome back, {}!'.format(mailchimp_user['merge_fields'].get('FNAME', email)),
-                                 extra_tags='font-weight-bold')
 
-            return redirect('mailchimp_auth:authenticate')
+            if mailchimp_user == 'error':
+                messages.add_message(self.request,
+                    messages.ERROR,
+                    'Something went wrong',
+                    extra_tags='font-weight-bold')
+
+                error_message = (
+                    'Please try to use the activation link again. If you continue encountering problems accessing the database, '
+                    'please contact our <a href="mailto:help@illinoisanswers.org" target="_blank">Data Coordinator</a>.'
+                )
+
+                messages.add_message(self.request,
+                                    messages.ERROR,
+                                    error_message)
+                return redirect(settings.MAILCHIMP_AUTH_REDIRECT_LOCATION)
+            else:
+                email = mailchimp_user['email_address']
+                messages.add_message(self.request,
+                                    messages.INFO,
+                                    'Welcome back, {}!'.format(mailchimp_user['merge_fields'].get('FNAME', email)),
+                                    extra_tags='font-weight-bold')
+
+                return redirect('mailchimp_auth:authenticate')
 
         else:
             messages.add_message(self.request,
